@@ -1,10 +1,19 @@
 services:
-  mongo:
-    image: mongo:7
+  postgres:
+    image: postgres:16-alpine
     ports:
-      - "27017:27017"
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: zametka
+      POSTGRES_PASSWORD: zametka
+      POSTGRES_DB: zametka
     volumes:
-      - zametka_mongo:/data/db
+      - zametka_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zametka -d zametka"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   backend:
     build: ./backend
@@ -12,13 +21,13 @@ services:
       - "8080:8080"
     environment:
       HTTP_ADDR: ":8080"
-      MONGO_URI: mongodb://mongo:27017
-      MONGO_DB: zametka
+      DATABASE_URL: postgres://zametka:zametka@postgres:5432/zametka?sslmode=disable
       JWT_SECRET: change-me-to-a-long-secret-at-least-32
       JWT_TTL: 720h
       CORS_ORIGINS: http://localhost:3000
     depends_on:
-      - mongo
+      postgres:
+        condition: service_healthy
 
 volumes:
-  zametka_mongo:
+  zametka_pg:

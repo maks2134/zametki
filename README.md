@@ -4,29 +4,23 @@
 
 ## Стек
 
-- **Backend:** Go, Fiber, MongoDB, JWT, WebSocket
+- **Backend:** Go, Fiber, PostgreSQL (Neon), JWT, WebSocket
 - **Frontend:** Next.js (App Router), Tailwind, shadcn/ui, framer-motion, zustand
 
 ## Быстрый старт
 
-### 1. MongoDB + backend
+### 1. Postgres + backend
 
 ```bash
 # из корня репозитория
-docker compose up -d mongo
+docker compose up -d postgres
 
 cd backend
-cp .env.example .env   # JWT_SECRET уже ≥32 символов в примере
+cp .env.example .env
 go run ./cmd/server
 ```
 
 API: `http://localhost:8080`
-
-Или весь backend в Docker:
-
-```bash
-docker compose up --build
-```
 
 ### 2. Frontend
 
@@ -41,8 +35,8 @@ UI: `http://localhost:3000`
 
 ## Выложить в интернет (бесплатно)
 
-Пошаговая инструкция для вас двоих: **[DEPLOY.md](DEPLOY.md)**  
-(MongoDB Atlas + Render + Vercel).
+Пошагово: **[DEPLOY.md](DEPLOY.md)** — Neon (Postgres) + Render + Vercel.  
+MongoDB больше не используется (на Render часто ломается TLS к Atlas).
 
 ## Как пользоваться
 

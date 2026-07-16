@@ -6,19 +6,17 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
-
 	"github.com/joho/godotenv"
 
 	"zametka/internal/auth"
 	"zametka/internal/config"
 	"zametka/internal/db"
-	mongorepo "zametka/internal/repository/mongo"
+	pgrepo "zametka/internal/repository/postgres"
 	"zametka/internal/service"
 	httptransport "zametka/internal/transport/http"
 	"zametka/internal/transport/ws"
@@ -35,28 +33,22 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	mongoClient, err := db.Connect(ctx, cfg)
+	pool, err := db.Connect(ctx, cfg)
 	if err != nil {
-		log.Fatalf("mongo: %v", err)
+		log.Fatalf("postgres: %v", err)
 	}
-	defer func() {
-		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer shutdownCancel()
-		_ = mongoClient.Disconnect(shutdownCtx)
-	}()
+	defer pool.Close()
 
-	if err := db.EnsureIndexes(ctx, mongoClient, cfg.MongoDB); err != nil {
-		log.Fatalf("indexes: %v", err)
+	if err := db.Migrate(ctx, pool); err != nil {
+		log.Fatalf("migrate: %v", err)
 	}
-
-	database := mongoClient.Database(cfg.MongoDB)
 
 	issuer := auth.NewTokenIssuer(cfg.JWTSecret, cfg.JWTTTL)
 	hub := ws.NewHub()
 	go hub.Run(ctx)
 
-	roomRepo := mongorepo.NewRoomRepository(database)
-	noteRepo := mongorepo.NewNoteRepository(database)
+	roomRepo := pgrepo.NewRoomRepository(pool)
+	noteRepo := pgrepo.NewNoteRepository(pool)
 
 	roomSvc := service.NewRoomService(roomRepo, issuer, hub)
 	noteSvc := service.NewNoteService(noteRepo, hub)

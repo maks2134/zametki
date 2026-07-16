@@ -8,12 +8,11 @@ import (
 )
 
 type Config struct {
-	HTTPAddr    string
-	MongoURI    string
-	MongoDB     string
-	JWTSecret   string
-	JWTTTL      time.Duration
-	CORSOrigins []string
+	HTTPAddr     string
+	DatabaseURL  string
+	JWTSecret    string
+	JWTTTL       time.Duration
+	CORSOrigins  []string
 }
 
 func Load() Config {
@@ -29,8 +28,7 @@ func Load() Config {
 
 	return Config{
 		HTTPAddr:    listenAddr(),
-		MongoURI:    envOr("MONGO_URI", "mongodb://localhost:27017"),
-		MongoDB:     envOr("MONGO_DB", "zametka"),
+		DatabaseURL: envOr("DATABASE_URL", "postgres://zametka:zametka@localhost:5432/zametka?sslmode=disable"),
 		JWTSecret:   os.Getenv("JWT_SECRET"),
 		JWTTTL:      ttl,
 		CORSOrigins: origins,
@@ -65,11 +63,8 @@ func (c Config) Validate() error {
 	if len(c.JWTSecret) < 32 {
 		return fmt.Errorf("JWT_SECRET must be at least 32 bytes")
 	}
-	if c.MongoURI == "" {
-		return fmt.Errorf("MONGO_URI is required")
-	}
-	if c.MongoDB == "" {
-		return fmt.Errorf("MONGO_DB is required")
+	if c.DatabaseURL == "" {
+		return fmt.Errorf("DATABASE_URL is required")
 	}
 	return nil
 }
