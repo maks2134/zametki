@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
 	"github.com/gofiber/fiber/v2"
@@ -61,12 +60,13 @@ func main() {
 	app.Use(recover.New())
 	app.Use(logger.New())
 	app.Use(cors.New(cors.Config{
-		AllowOriginsFunc: func(origin string) bool {
-			return allowOrigin(origin, cfg.CORSOrigins)
-		},
-		AllowMethods:     "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-		AllowHeaders:     "Authorization,Content-Type",
+		// Private couple app + Bearer token (no cookies) — open CORS avoids Vercel preview URL churn.
+		AllowOrigins:     "*",
+		AllowMethods:     "GET,POST,PUT,PATCH,DELETE,OPTIONS,HEAD",
+		AllowHeaders:     "Origin,Content-Type,Accept,Authorization",
+		ExposeHeaders:    "Content-Length",
 		AllowCredentials: false,
+		MaxAge:           86400,
 	}))
 
 	httptransport.RegisterRoutes(app, roomSvc, noteSvc, issuer)
@@ -88,23 +88,4 @@ func main() {
 	if err := app.Shutdown(); err != nil {
 		log.Printf("shutdown: %v", err)
 	}
-}
-
-func allowOrigin(origin string, allowed []string) bool {
-	if origin == "" {
-		return false
-	}
-	for _, a := range allowed {
-		if a == "*" || a == origin {
-			return true
-		}
-	}
-	// Vercel preview + production URLs change; allow any https://*.vercel.app
-	if strings.HasPrefix(origin, "https://") && strings.HasSuffix(origin, ".vercel.app") {
-		return true
-	}
-	if origin == "http://localhost:3000" || origin == "http://127.0.0.1:3000" {
-		return true
-	}
-	return false
 }
