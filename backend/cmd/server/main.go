@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/gofiber/fiber/v2"
@@ -60,7 +61,10 @@ func main() {
 	app.Use(recover.New())
 	app.Use(logger.New())
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     joinOrigins(cfg.CORSOrigins),
+		AllowOriginsFunc: func(origin string) bool {
+			return allowOrigin(origin, cfg.CORSOrigins)
+		},
+		AllowMethods:     "GET,POST,PUT,PATCH,DELETE,OPTIONS",
 		AllowHeaders:     "Authorization,Content-Type",
 		AllowCredentials: false,
 	}))
@@ -86,13 +90,21 @@ func main() {
 	}
 }
 
-func joinOrigins(origins []string) string {
-	if len(origins) == 0 {
-		return "http://localhost:3000"
+func allowOrigin(origin string, allowed []string) bool {
+	if origin == "" {
+		return false
 	}
-	result := origins[0]
-	for i := 1; i < len(origins); i++ {
-		result += "," + origins[i]
+	for _, a := range allowed {
+		if a == "*" || a == origin {
+			return true
+		}
 	}
-	return result
+	// Vercel preview + production URLs change; allow any https://*.vercel.app
+	if strings.HasPrefix(origin, "https://") && strings.HasSuffix(origin, ".vercel.app") {
+		return true
+	}
+	if origin == "http://localhost:3000" || origin == "http://127.0.0.1:3000" {
+		return true
+	}
+	return false
 }
